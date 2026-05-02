@@ -67,3 +67,24 @@ describe("Cache", () => {
     expect(raw?.result).toBeNull();
   });
 });
+
+describe("Cache eviction", () => {
+  it("evicts oldest 20% when over budget", async () => {
+    const mock = makeStorageMock();
+    let now = 1000;
+    const cache = new Cache(mock.api as unknown as typeof chrome.storage, () => now);
+    // tlustá fixture - velký bytes-in-use
+    mock.api.local.getBytesInUse = vi.fn(async () => 5_000_000);
+
+    for (let i = 0; i < 10; i++) {
+      now += 1000;
+      await cache.set("k" + i, sampleResult);
+    }
+    await cache.maybeEvict(4_000_000);
+
+    // 20 % z 10 = 2 nejstarší (k0, k1) jsou pryč
+    expect(await cache.getRaw("k0")).toBeUndefined();
+    expect(await cache.getRaw("k1")).toBeUndefined();
+    expect(await cache.getRaw("k2")).toBeDefined();
+  });
+});
