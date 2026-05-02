@@ -1,21 +1,16 @@
 {
   "name": "netflix-csfd",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
+  "version": "0.1.0",
+  "description": "Chrome rozšíření zobrazující ČSFD hodnocení na Netflix",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/sync-manifest-version.mjs",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.4.0",
     "@types/chrome": "^0.1.40",

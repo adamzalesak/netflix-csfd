@@ -1,0 +1,56 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      - run: npm run build
+
+      - name: Package extension
+        run: |
+          VERSION=$(node -p "require('./manifest.json').version")
+          cd dist
+          zip -qr "../netflix-csfd-${VERSION}.zip" .
+          cd ..
+          ls -la netflix-csfd-*.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: netflix-csfd-extension
+          path: netflix-csfd-*.zip
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: netflix-csfd-*.zip
+          generate_release_notes: true
+          body: |
+            ## Instalace
+
+            1. Stáhni `netflix-csfd-*.zip` níže a rozbal
+            2. V Chrome otevři `chrome://extensions/`
+            3. Zapni **Developer mode** vpravo nahoře
+            4. Klik **Load unpacked** → vyber rozbalenou složku
+            5. Otevři Netflix.com a hodnocení z ČSFD se začnou objevovat
