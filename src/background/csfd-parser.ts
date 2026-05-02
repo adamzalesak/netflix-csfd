@@ -55,20 +55,15 @@ function parseIntCleanly(text: string): number | null {
 }
 
 function extractVotes(html: string, doc: NHParseElement): number {
-  // 1. Schema.org markup — robustnější než class names
-  const schema = doc.querySelector('[itemprop="ratingCount"]');
-  if (schema) {
-    const t = schema.getAttribute("content") ?? schema.textContent ?? "";
-    const n = parseIntCleanly(t);
-    if (n != null && n > 0) return n;
-  }
-  // 2. Známé selektory na CSFD
+  // 1. Reálná CSFD struktura:
+  //    <div class="ratings-list">
+  //      <h2>Hodnocení <span class="counter">(20&nbsp;795)</span></h2>
   const selectors = [
-    ".star-rating strong",
+    ".ratings-list .counter",
+    ".ratings-list h2 .counter",
     ".rating-total strong",
     ".rating-total a",
     ".rating-total",
-    ".film-rating-content strong",
   ];
   for (const sel of selectors) {
     const el = doc.querySelector(sel);
@@ -77,13 +72,11 @@ function extractVotes(html: string, doc: NHParseElement): number {
       if (n != null && n > 0) return n;
     }
   }
-  // 3. Text-based fallback: <strong>N</strong> blízko slova "Hodnocení"
-  // (regex na raw body, nezávislé na class names)
-  const m =
-    html.match(/[Hh]odnocení[\s\S]{0,300}?<strong>\s*([\d\s]{1,12})\s*<\/strong>/) ??
-    html.match(/<strong>\s*([\d\s]{1,12})\s*<\/strong>[\s\S]{0,80}?[Hh]odnocení/);
-  if (m && m[1]) {
-    const n = parseIntCleanly(m[1]);
+  // 2. Schema.org SEO fallback
+  const schema = doc.querySelector('[itemprop="ratingCount"]');
+  if (schema) {
+    const t = schema.getAttribute("content") ?? schema.textContent ?? "";
+    const n = parseIntCleanly(t);
     if (n != null && n > 0) return n;
   }
   return 0;
