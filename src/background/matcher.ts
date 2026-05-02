@@ -29,8 +29,23 @@ export type MatchInput = {
   year: number | null;
 };
 
+export function titleMatchScore(a: string, b: string): number {
+  if (a === b) return 1;
+  const sim = titleSimilarity(a, b);
+  // Containment boost: kratší title plně obsažený v delším je silný signál.
+  // Pomáhá v případech jako "papirovy dum" v "papirovy dum netflix verze",
+  // kde Dice klesá kvůli delšímu kandidátovi.
+  const longer = a.length >= b.length ? a : b;
+  const shorter = a.length >= b.length ? b : a;
+  if (shorter.length >= 4 && longer.includes(shorter)) {
+    const ratio = shorter.length / longer.length;
+    return Math.max(sim, 0.85 + 0.15 * ratio);
+  }
+  return sim;
+}
+
 export function scoreCandidate(query: MatchInput, candidate: MatchInput): number {
-  const titleScore = titleSimilarity(query.titleNormalized, candidate.titleNormalized);
+  const titleScore = titleMatchScore(query.titleNormalized, candidate.titleNormalized);
   let yearScore = 0;
   if (query.year != null && candidate.year != null) {
     const diff = Math.abs(query.year - candidate.year);

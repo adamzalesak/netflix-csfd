@@ -56,10 +56,23 @@ function scan(root: ParentNode = document): void {
     ...queryAll(root, SELECTORS.tile),
     ...queryAll(root, SELECTORS.searchResult),
   ]);
+  const bobs = outermost(queryAll(root, SELECTORS.bobCard));
+  const modals = outermost(queryAll(root, SELECTORS.detailModal));
+  console.log("[CSFD] scan:", { tiles: tiles.length, bobs: bobs.length, modals: modals.length });
   for (const el of tiles) void processTile(el);
-  for (const el of outermost(queryAll(root, SELECTORS.bobCard))) void processBobCard(el);
-  for (const el of outermost(queryAll(root, SELECTORS.detailModal))) void processDetailModal(el);
+  for (const el of bobs) void processBobCard(el);
+  for (const el of modals) void processDetailModal(el);
 }
+
+function dumpDataUia(): void {
+  const all = new Set<string>();
+  for (const el of Array.from(document.querySelectorAll("[data-uia]"))) {
+    const v = el.getAttribute("data-uia");
+    if (v) all.add(v);
+  }
+  console.log("[CSFD] data-uia values currently in DOM:", Array.from(all).sort());
+}
+(globalThis as unknown as { __csfdDumpUia: () => void }).__csfdDumpUia = dumpDataUia;
 
 let pending: number | null = null;
 function scheduleScan(): void {
