@@ -88,10 +88,12 @@ export function renderSmallBadge(parent: HTMLElement, state: SmallBadgeState): v
   root.innerHTML = `<style>${SMALL_STYLES}</style>${body}`;
 }
 
-export function renderLargeBadge(parent: HTMLElement, state: LargeBadgeState): void {
-  const after: PlacementFn = () => parent.querySelector(
-    '[data-uia*="player_container"], .previewModal--player_container'
-  );
+export function renderLargeBadge(
+  parent: HTMLElement,
+  state: LargeBadgeState,
+  placeAfterSelector: string = '[data-uia*="player_container"], .previewModal--player_container'
+): void {
+  const after: PlacementFn = () => parent.querySelector(placeAfterSelector);
   const { root } = getOrCreateHost(parent, LARGE_VALUE, after);
   let body: string;
   if (state.kind === "loading") {

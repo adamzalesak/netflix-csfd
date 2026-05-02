@@ -1,5 +1,5 @@
 import { SELECTORS } from "./netflix-selectors";
-import { extractFromTile } from "./extract-title";
+import { extractFromTile, extractFromBillboard } from "./extract-title";
 import { renderSmallBadge, renderLargeBadge } from "./badge";
 import { lookup } from "./lookup-client";
 
@@ -64,6 +64,20 @@ async function processBobCard(el: HTMLElement): Promise<void> {
   renderLargeBadge(el, { kind: "result", result });
 }
 
+const BILLBOARD_PLACE_AFTER =
+  '.synopsis-fade-container, .info-wrapper-fade, .titleWrapper';
+
+async function processBillboard(el: HTMLElement): Promise<void> {
+  const { title } = extractFromBillboard(el);
+  if (!title) return;
+  if (lastTitleByElement.get(el) === title) return;
+  lastTitleByElement.set(el, title);
+  renderLargeBadge(el, { kind: "loading" }, BILLBOARD_PLACE_AFTER);
+  const result = await lookup(title, null);
+  if (lastTitleByElement.get(el) !== title) return;
+  renderLargeBadge(el, { kind: "result", result }, BILLBOARD_PLACE_AFTER);
+}
+
 async function processDetailModal(el: HTMLElement): Promise<void> {
   const click = lastClick && Date.now() - lastClick.at < 10_000 ? lastClick : null;
   const source = click ?? lastHover;
@@ -101,9 +115,11 @@ function scan(root: ParentNode = document): void {
   ]);
   const bobs = outermost(queryAll(root, SELECTORS.bobCard));
   const modals = outermost(queryAll(root, SELECTORS.detailModal));
+  const billboards = outermost(queryAll(root, SELECTORS.billboard));
   for (const el of tiles) void processTile(el);
   for (const el of bobs) void processBobCard(el);
   for (const el of modals) void processDetailModal(el);
+  for (const el of billboards) void processBillboard(el);
 }
 
 

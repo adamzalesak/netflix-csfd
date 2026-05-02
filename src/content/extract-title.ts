@@ -5,20 +5,23 @@ export type Extracted = {
   year: number | null;
 };
 
+function textOf(el: Element): string | null {
+  if (el.tagName === "IMG") {
+    const v = el.getAttribute("alt") ?? el.getAttribute("title");
+    if (v?.trim()) return v.trim();
+  }
+  const aria = el.getAttribute("aria-label");
+  if (aria?.trim()) return aria.trim();
+  const tc = el.textContent?.trim();
+  return tc || null;
+}
+
 function firstText(root: HTMLElement, selectors: readonly string[]): string | null {
   for (const sel of selectors) {
     const el = root.querySelector(sel);
     if (!el) continue;
-    if (sel === "[aria-label]") {
-      const v = el.getAttribute("aria-label");
-      if (v?.trim()) return v.trim();
-    } else if (sel === "img[alt]") {
-      const v = el.getAttribute("alt");
-      if (v?.trim()) return v.trim();
-    } else {
-      const v = el.textContent?.trim();
-      if (v) return v;
-    }
+    const t = textOf(el);
+    if (t) return t;
   }
   return null;
 }
@@ -44,6 +47,10 @@ function findYear(root: HTMLElement, selectors: readonly string[]): number | nul
 
 export function extractFromTile(el: HTMLElement): Extracted {
   return { title: firstText(el, TITLE_SOURCES.tile), year: null };
+}
+
+export function extractFromBillboard(el: HTMLElement): Extracted {
+  return { title: firstText(el, TITLE_SOURCES.billboard), year: null };
 }
 
 export function extractFromBobCard(el: HTMLElement): Extracted {

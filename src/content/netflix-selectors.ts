@@ -13,6 +13,9 @@ export const SELECTORS = {
 
   // search results
   searchResult: '.search-result-card, [data-uia*="search-result"]',
+
+  // billboard (hlavní propagovaný film nahoře na browse)
+  billboard: '.billboard, [data-uia="billboard-row"]',
 } as const;
 
 export const TITLE_SOURCES = {
@@ -22,6 +25,8 @@ export const TITLE_SOURCES = {
   bobCard: ['.bob-title', '.previewModal--player_title h3', 'h3'],
   detailModal: ['.previewModal--player_container h3', 'h3.title-title', 'h3'],
   searchResult: ['[aria-label]', 'h3'],
+  // billboard: title je obrázek (logo) s alt atributem
+  billboard: ['[data-uia="billboard-title"] img', '.billboard-title img', '.billboard-title'],
 } as const;
 
 export const META_SOURCES = {
