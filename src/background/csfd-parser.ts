@@ -63,6 +63,8 @@ export function parseDetailPage(html: string): DetailData | null {
   if (rating == null) return null;
 
   const votesText =
+    doc.querySelector(".star-rating strong")?.textContent ??
+    doc.querySelector(".rating-total strong")?.textContent ??
     doc.querySelector(".rating-total a")?.textContent ??
     doc.querySelector(".rating-total")?.textContent ?? "";
   const votes = parseIntCleanly(votesText) ?? 0;
