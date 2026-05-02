@@ -42,28 +42,34 @@ async function processTile(el: HTMLElement): Promise<void> {
   renderSmallBadge(el, { kind: "result", result });
 }
 
+// Modal elements are recyklované Netflixem — místo PROCESSED dedup po
+// elementu používáme dedup po (element, title) páru.
+const lastTitleByElement = new WeakMap<HTMLElement, string>();
+
 async function processBobCard(el: HTMLElement): Promise<void> {
-  if (PROCESSED.has(el)) return;
   const fromModal = extractFromBobCard(el);
   const title = fromModal.title ?? lastHover?.title ?? null;
   const year = fromModal.year ?? lastHover?.year ?? null;
   if (!title) return;
-  PROCESSED.add(el);
+  if (lastTitleByElement.get(el) === title) return;
+  lastTitleByElement.set(el, title);
   renderLargeBadge(el, { kind: "loading" });
   const result = await lookup(title, year);
+  if (lastTitleByElement.get(el) !== title) return;  // newer lookup superseded
   renderLargeBadge(el, { kind: "result", result });
 }
 
 async function processDetailModal(el: HTMLElement): Promise<void> {
-  if (PROCESSED.has(el)) return;
   const fromModal = extractFromDetailModal(el);
   const click = lastClick && Date.now() - lastClick.at < 10_000 ? lastClick : null;
   const title = fromModal.title ?? click?.title ?? lastHover?.title ?? null;
   const year = fromModal.year ?? click?.year ?? lastHover?.year ?? null;
   if (!title) return;
-  PROCESSED.add(el);
+  if (lastTitleByElement.get(el) === title) return;
+  lastTitleByElement.set(el, title);
   renderLargeBadge(el, { kind: "loading" });
   const result = await lookup(title, year);
+  if (lastTitleByElement.get(el) !== title) return;
   renderLargeBadge(el, { kind: "result", result });
 }
 

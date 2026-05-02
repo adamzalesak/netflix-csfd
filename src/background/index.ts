@@ -91,11 +91,12 @@ async function doLookup(req: LookupRequest): Promise<CSFDResult | null> {
   }
   const parsed = parseDetailPage(detail.body);
   console.log("[CSFD] detail parsed for", best.payload.title, parsed);
-  if (!parsed || parsed.rating < 1 || parsed.rating > 100) {
-    const bodyStart = detail.body.indexOf("<body");
-    const sample = bodyStart >= 0 ? detail.body.slice(bodyStart, bodyStart + 3000) : "(no <body)";
-    console.warn("[CSFD] detail looks suspicious — body sample:\n" + sample);
-  }
+
+  // diag: dump pieces of detail HTML so we can verify rating/votes selectors
+  const ratingMatches = detail.body.match(/<[^>]*class="[^"]*rating[^"]*"[^>]*>[\s\S]{0,400}/g);
+  console.log("[CSFD] detail rating-class snippets (first 3):", ratingMatches?.slice(0, 3));
+  const voteMatches = detail.body.match(/(hodnocen[ií]|hodnotil[oa]?|vote)[\s\S]{0,200}/gi);
+  console.log("[CSFD] detail vote-keyword snippets (first 3):", voteMatches?.slice(0, 3));
 
   return { ...parsed!, csfdUrl: best.payload.url };
 }
