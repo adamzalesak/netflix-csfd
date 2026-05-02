@@ -58,7 +58,11 @@ async function doLookup(req: LookupRequest): Promise<CSFDResult | null> {
   const rawCandidates = parseSearchResults(search.body);
   console.log("[CSFD] parsed", rawCandidates.length, "candidates", rawCandidates.slice(0, 3));
   if (rawCandidates.length === 0) {
-    console.warn("[CSFD] zero candidates — first 500 chars of body:", search.body.slice(0, 500));
+    const bodyStart = search.body.indexOf("<body");
+    const sample = bodyStart >= 0 ? search.body.slice(bodyStart, bodyStart + 3000) : "(no <body)";
+    console.warn("[CSFD] zero candidates — body sample:\n" + sample);
+    const filmLinks = search.body.match(/<a[^>]+href="\/film\/[^"]+"[^>]*>[^<]{0,200}<\/a>/g);
+    console.warn("[CSFD] film links found:", filmLinks?.slice(0, 3));
   }
 
   const candidates = rawCandidates.map(c => ({
