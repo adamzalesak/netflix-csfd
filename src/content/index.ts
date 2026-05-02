@@ -1,17 +1,18 @@
 import { SELECTORS } from "./netflix-selectors";
 import { extractFromTile, extractFromBobCard, extractFromDetailModal } from "./extract-title";
-import { renderSmallBadge, renderLargeBadge, hasBadge } from "./badge";
+import { renderSmallBadge, renderLargeBadge } from "./badge";
 import { lookup } from "./lookup-client";
 
 const PROCESSED = new WeakSet<HTMLElement>();
 
 async function processTile(el: HTMLElement): Promise<void> {
-  if (PROCESSED.has(el) || hasBadge(el)) return;
+  if (PROCESSED.has(el)) return;
   const { title } = extractFromTile(el);
   if (!title) return;
   PROCESSED.add(el);
+  renderSmallBadge(el, { kind: "loading" });
   const result = await lookup(title, null);
-  renderSmallBadge(el, result);
+  renderSmallBadge(el, { kind: "result", result });
 }
 
 async function processBobCard(el: HTMLElement): Promise<void> {
@@ -19,8 +20,9 @@ async function processBobCard(el: HTMLElement): Promise<void> {
   const { title, year } = extractFromBobCard(el);
   if (!title) return;
   PROCESSED.add(el);
+  renderLargeBadge(el, { kind: "loading" });
   const result = await lookup(title, year);
-  renderLargeBadge(el, result);
+  renderLargeBadge(el, { kind: "result", result });
 }
 
 async function processDetailModal(el: HTMLElement): Promise<void> {
@@ -28,8 +30,9 @@ async function processDetailModal(el: HTMLElement): Promise<void> {
   const { title, year } = extractFromDetailModal(el);
   if (!title) return;
   PROCESSED.add(el);
+  renderLargeBadge(el, { kind: "loading" });
   const result = await lookup(title, year);
-  renderLargeBadge(el, result);
+  renderLargeBadge(el, { kind: "result", result });
 }
 
 function scan(root: ParentNode = document): void {

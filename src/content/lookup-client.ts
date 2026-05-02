@@ -7,7 +7,12 @@ export function makeKey(title: string, year: number | null): string {
 
 export async function lookup(title: string, year: number | null): Promise<CSFDResult | null> {
   const req: LookupRequest = { type: "lookup", key: makeKey(title, year), title, year };
-  const res: LookupResponse = await chrome.runtime.sendMessage(req);
-  if (!res.ok) return null;
-  return res.result;
+  try {
+    const res: LookupResponse = await chrome.runtime.sendMessage(req);
+    if (!res.ok) return null;
+    return res.result;
+  } catch (err) {
+    console.warn("[CSFD] message channel error:", err);
+    return null;
+  }
 }
