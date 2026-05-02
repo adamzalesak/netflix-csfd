@@ -54,6 +54,41 @@ function parseIntCleanly(text: string): number | null {
   return m ? Number(m[0]) : null;
 }
 
+function extractVotes(html: string, doc: NHParseElement): number {
+  // 1. Schema.org markup — robustnější než class names
+  const schema = doc.querySelector('[itemprop="ratingCount"]');
+  if (schema) {
+    const t = schema.getAttribute("content") ?? schema.textContent ?? "";
+    const n = parseIntCleanly(t);
+    if (n != null && n > 0) return n;
+  }
+  // 2. Známé selektory na CSFD
+  const selectors = [
+    ".star-rating strong",
+    ".rating-total strong",
+    ".rating-total a",
+    ".rating-total",
+    ".film-rating-content strong",
+  ];
+  for (const sel of selectors) {
+    const el = doc.querySelector(sel);
+    if (el) {
+      const n = parseIntCleanly(el.textContent ?? "");
+      if (n != null && n > 0) return n;
+    }
+  }
+  // 3. Text-based fallback: <strong>N</strong> blízko slova "Hodnocení"
+  // (regex na raw body, nezávislé na class names)
+  const m =
+    html.match(/[Hh]odnocení[\s\S]{0,300}?<strong>\s*([\d\s]{1,12})\s*<\/strong>/) ??
+    html.match(/<strong>\s*([\d\s]{1,12})\s*<\/strong>[\s\S]{0,80}?[Hh]odnocení/);
+  if (m && m[1]) {
+    const n = parseIntCleanly(m[1]);
+    if (n != null && n > 0) return n;
+  }
+  return 0;
+}
+
 export function parseDetailPage(html: string): DetailData | null {
   const doc = parseHtml(html);
   const ratingText =
@@ -62,12 +97,7 @@ export function parseDetailPage(html: string): DetailData | null {
   const rating = parseIntCleanly(ratingText);
   if (rating == null) return null;
 
-  const votesText =
-    doc.querySelector(".star-rating strong")?.textContent ??
-    doc.querySelector(".rating-total strong")?.textContent ??
-    doc.querySelector(".rating-total a")?.textContent ??
-    doc.querySelector(".rating-total")?.textContent ?? "";
-  const votes = parseIntCleanly(votesText) ?? 0;
+  const votes = extractVotes(html, doc);
 
   const origTitle =
     doc.querySelector(".film-names .en h3, .film-names li.en h3")?.textContent?.trim() ??
