@@ -2,7 +2,7 @@ import { Cache } from "./cache";
 import { ThrottleQueue } from "./queue";
 import { realFetch, searchUrl, isAntiBotChallenge } from "./csfd-fetcher";
 import { parseSearchResults, parseDetailPage } from "./csfd-parser";
-import { pickBestMatch } from "./matcher";
+import { pickBestMatch, scoreCandidate } from "./matcher";
 import { normalizeTitle } from "../shared/normalize";
 import type { Message, LookupRequest, LookupResponse, CSFDResult } from "../shared/types";
 
@@ -56,7 +56,6 @@ async function doLookup(req: LookupRequest): Promise<CSFDResult | null> {
   }
 
   const rawCandidates = parseSearchResults(search.body);
-  console.log("[CSFD] parsed", rawCandidates.length, "candidates", rawCandidates.slice(0, 3));
   if (rawCandidates.length === 0) {
     const bodyStart = search.body.indexOf("<body");
     const sample = bodyStart >= 0 ? search.body.slice(bodyStart, bodyStart + 3000) : "(no <body)";
@@ -71,6 +70,13 @@ async function doLookup(req: LookupRequest): Promise<CSFDResult | null> {
     payload: c,
   }));
   const queryNorm = { titleNormalized: normalizeTitle(req.title), year: req.year };
+  const scored = candidates.map(c => ({
+    title: c.payload.title,
+    year: c.payload.year,
+    url: c.payload.url,
+    score: scoreCandidate(queryNorm, c),
+  }));
+  console.log("[CSFD] candidates with scores for", req.title, scored);
   const best = pickBestMatch(queryNorm, candidates, 0.6);
   console.log("[CSFD] best match", req.title, "→", best?.payload ?? "none");
   if (!best) return null;
@@ -84,10 +90,14 @@ async function doLookup(req: LookupRequest): Promise<CSFDResult | null> {
     throw new Error("anti-bot-challenge-detail");
   }
   const parsed = parseDetailPage(detail.body);
-  console.log("[CSFD] detail parsed", parsed);
-  if (!parsed) return null;
+  console.log("[CSFD] detail parsed for", best.payload.title, parsed);
+  if (!parsed || parsed.rating < 1 || parsed.rating > 100) {
+    const bodyStart = detail.body.indexOf("<body");
+    const sample = bodyStart >= 0 ? detail.body.slice(bodyStart, bodyStart + 3000) : "(no <body)";
+    console.warn("[CSFD] detail looks suspicious — body sample:\n" + sample);
+  }
 
-  return { ...parsed, csfdUrl: best.payload.url };
+  return { ...parsed!, csfdUrl: best.payload.url };
 }
 
 chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
