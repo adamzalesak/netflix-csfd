@@ -25,12 +25,14 @@ function findYearInAncestors(el: NHParseElement, maxLevels: number = 5): number 
 
 export function parseSearchResults(html: string): SearchCandidate[] {
   const doc = parseHtml(html);
-  const links = doc.querySelectorAll("a.film-title-name");
+  // Catches a.film-title-name (movies), a.serial-title-name / a.tv-title-name (TV),
+  // any future *-title-name class CSFD might use.
+  const links = doc.querySelectorAll("a[class*='title-name']");
   const results: SearchCandidate[] = [];
   const seen = new Set<string>();
   for (const link of links) {
     const href = link.getAttribute("href") ?? "";
-    if (!href.startsWith("/film/")) continue;
+    if (!/^\/(film|serial)\//.test(href)) continue;
     const title = (link.textContent ?? "").trim();
     if (!title || seen.has(href)) continue;
     seen.add(href);
