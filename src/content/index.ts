@@ -1,5 +1,5 @@
 import { SELECTORS } from "./netflix-selectors";
-import { extractFromTile, extractFromBobCard, extractFromDetailModal } from "./extract-title";
+import { extractFromTile } from "./extract-title";
 import { renderSmallBadge, renderLargeBadge } from "./badge";
 import { lookup } from "./lookup-client";
 
@@ -47,24 +47,21 @@ async function processTile(el: HTMLElement): Promise<void> {
 const lastTitleByElement = new WeakMap<HTMLElement, string>();
 
 async function processBobCard(el: HTMLElement): Promise<void> {
-  const fromModal = extractFromBobCard(el);
-  const title = fromModal.title ?? lastHover?.title ?? null;
-  const year = fromModal.year ?? lastHover?.year ?? null;
-  if (!title) return;
+  if (!lastHover) return;
+  const { title, year } = lastHover;
   if (lastTitleByElement.get(el) === title) return;
   lastTitleByElement.set(el, title);
   renderLargeBadge(el, { kind: "loading" });
   const result = await lookup(title, year);
-  if (lastTitleByElement.get(el) !== title) return;  // newer lookup superseded
+  if (lastTitleByElement.get(el) !== title) return;
   renderLargeBadge(el, { kind: "result", result });
 }
 
 async function processDetailModal(el: HTMLElement): Promise<void> {
-  const fromModal = extractFromDetailModal(el);
   const click = lastClick && Date.now() - lastClick.at < 10_000 ? lastClick : null;
-  const title = fromModal.title ?? click?.title ?? lastHover?.title ?? null;
-  const year = fromModal.year ?? click?.year ?? lastHover?.year ?? null;
-  if (!title) return;
+  const source = click ?? lastHover;
+  if (!source) return;
+  const { title, year } = source;
   if (lastTitleByElement.get(el) === title) return;
   lastTitleByElement.set(el, title);
   renderLargeBadge(el, { kind: "loading" });
