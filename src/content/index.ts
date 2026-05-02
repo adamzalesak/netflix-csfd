@@ -5,24 +5,32 @@ import { lookup } from "./lookup-client";
 
 const PROCESSED = new WeakSet<HTMLElement>();
 
-// Modern Netflix hover preview ("MINI_MODAL") nezobrazuje název filmu.
-// Trackujeme poslední tile, na kterém uživatel hoveroval, a jeho title
-// použijeme jako fallback v processBobCard / processDetailModal.
+// Modern Netflix hover preview ("MINI_MODAL") a detail modal nezobrazují
+// název filmu uvnitř. Trackujeme poslední hover (pro bob card) a poslední
+// click (pro detail modal — to je nejsilnější signál, co uživatel vybral).
 let lastHover: { title: string; year: number | null } | null = null;
+let lastClick: { title: string; year: number | null; at: number } | null = null;
 
-function trackHover(target: HTMLElement | null): void {
+document.addEventListener("mouseover", (ev) => {
+  const target = ev.target as HTMLElement | null;
   if (!target?.closest) return;
   const tile = target.closest(SELECTORS.tile) as HTMLElement | null;
   if (!tile) return;
-  // Tile uvnitř bob/detail modalu = doporučení / epizoda — ne to, co user
-  // právě prohlíží na hlavní stránce. Nesmí přepsat lastHover.
+  // Tile uvnitř bob/detail modalu = doporučení / epizoda — nepřepíše lastHover.
   if (tile.closest(SELECTORS.bobCard) || tile.closest(SELECTORS.detailModal)) return;
   const { title } = extractFromTile(tile);
   if (title) lastHover = { title, year: null };
-}
+}, true);
 
-document.addEventListener("mouseover", (ev) => trackHover(ev.target as HTMLElement), true);
-document.addEventListener("click", (ev) => trackHover(ev.target as HTMLElement), true);
+document.addEventListener("click", (ev) => {
+  const target = ev.target as HTMLElement | null;
+  if (!target?.closest) return;
+  const tile = target.closest(SELECTORS.tile) as HTMLElement | null;
+  if (!tile) return;
+  // Click na rec uvnitř modalu otevře detail TÉ rec — taky se eviduje.
+  const { title } = extractFromTile(tile);
+  if (title) lastClick = { title, year: null, at: Date.now() };
+}, true);
 
 async function processTile(el: HTMLElement): Promise<void> {
   if (PROCESSED.has(el)) return;
@@ -49,8 +57,9 @@ async function processBobCard(el: HTMLElement): Promise<void> {
 async function processDetailModal(el: HTMLElement): Promise<void> {
   if (PROCESSED.has(el)) return;
   const fromModal = extractFromDetailModal(el);
-  const title = fromModal.title ?? lastHover?.title ?? null;
-  const year = fromModal.year ?? lastHover?.year ?? null;
+  const click = lastClick && Date.now() - lastClick.at < 10_000 ? lastClick : null;
+  const title = fromModal.title ?? click?.title ?? lastHover?.title ?? null;
+  const year = fromModal.year ?? click?.year ?? lastHover?.year ?? null;
   if (!title) return;
   PROCESSED.add(el);
   renderLargeBadge(el, { kind: "loading" });
