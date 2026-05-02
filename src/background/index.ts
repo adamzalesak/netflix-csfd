@@ -15,9 +15,15 @@ const CIRCUIT_DURATION_MS = 60_000;
 
 async function lookup(req: LookupRequest): Promise<LookupResponse> {
   const cached = await cache.get(req.key);
-  if (cached !== undefined) return { ok: true, result: cached };
+  if (cached !== undefined) {
+    console.log("[CSFD] cache hit", req.title, "→", cached ? `${cached.rating}%` : "no-match");
+    return { ok: true, result: cached };
+  }
 
-  if (queue.isCircuitOpen()) return { ok: false, error: "circuit-open" };
+  if (queue.isCircuitOpen()) {
+    console.warn("[CSFD] circuit open, skip", req.title);
+    return { ok: false, error: "circuit-open" };
+  }
 
   try {
     const result = await queue.run(req.key, async () => doLookup(req));
@@ -25,12 +31,17 @@ async function lookup(req: LookupRequest): Promise<LookupResponse> {
     else await cache.setNegative(req.key);
     return { ok: true, result };
   } catch (err) {
+    console.error("[CSFD] lookup failed", req.title, err);
     return { ok: false, error: String(err) };
   }
 }
 
 async function doLookup(req: LookupRequest): Promise<CSFDResult | null> {
-  const search = await realFetch(searchUrl(req.title));
+  const url = searchUrl(req.title);
+  console.log("[CSFD] search", req.title, req.year, "→", url);
+  const search = await realFetch(url);
+  console.log("[CSFD] search response", search.status, "bodyLen=", search.body.length);
+
   if (search.status === 429 || search.status === 503) {
     consecutiveRateLimits++;
     if (consecutiveRateLimits >= CIRCUIT_TRIP) queue.openCircuit(CIRCUIT_DURATION_MS);
@@ -39,22 +50,37 @@ async function doLookup(req: LookupRequest): Promise<CSFDResult | null> {
   consecutiveRateLimits = 0;
   if (search.status !== 200) throw new Error(`search:${search.status}`);
   if (isAntiBotChallenge(search.body)) {
+    console.warn("[CSFD] anti-bot challenge detected — first 300 chars:", search.body.slice(0, 300));
     queue.openCircuit(CIRCUIT_DURATION_MS);
     throw new Error("anti-bot-challenge");
   }
 
-  const candidates = parseSearchResults(search.body).map(c => ({
+  const rawCandidates = parseSearchResults(search.body);
+  console.log("[CSFD] parsed", rawCandidates.length, "candidates", rawCandidates.slice(0, 3));
+  if (rawCandidates.length === 0) {
+    console.warn("[CSFD] zero candidates — first 500 chars of body:", search.body.slice(0, 500));
+  }
+
+  const candidates = rawCandidates.map(c => ({
     titleNormalized: normalizeTitle(c.title),
     year: c.year,
     payload: c,
   }));
   const queryNorm = { titleNormalized: normalizeTitle(req.title), year: req.year };
   const best = pickBestMatch(queryNorm, candidates, 0.6);
+  console.log("[CSFD] best match", req.title, "→", best?.payload ?? "none");
   if (!best) return null;
 
+  console.log("[CSFD] detail fetch", best.payload.url);
   const detail = await realFetch(best.payload.url);
+  console.log("[CSFD] detail response", detail.status, "bodyLen=", detail.body.length);
   if (detail.status !== 200) throw new Error(`detail:${detail.status}`);
+  if (isAntiBotChallenge(detail.body)) {
+    queue.openCircuit(CIRCUIT_DURATION_MS);
+    throw new Error("anti-bot-challenge-detail");
+  }
   const parsed = parseDetailPage(detail.body);
+  console.log("[CSFD] detail parsed", parsed);
   if (!parsed) return null;
 
   return { ...parsed, csfdUrl: best.payload.url };
