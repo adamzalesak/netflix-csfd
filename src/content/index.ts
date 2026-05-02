@@ -66,6 +66,34 @@ function dumpUiaIfChanged(): void {
   }
 }
 
+const PROBE_SELECTORS = [
+  ".previewModal",
+  ".previewModal--container",
+  ".previewModal--detail",
+  ".previewModal--player_container",
+  ".bob-card",
+  ".bobCard",
+  '[data-uia*="modal"]',
+  '[data-uia*="preview"]',
+  '[data-uia*="popup"]',
+  '[data-uia*="bob"]',
+  ".detail-modal",
+  '[role="dialog"]',
+  '[class*="popupCard"]',
+  '[class*="hoverCard"]',
+];
+
+let prevProbeSnapshot = "";
+function dumpProbesIfChanged(): void {
+  const result = PROBE_SELECTORS.map(s => `${s}: ${document.querySelectorAll(s).length}`);
+  const nonzero = result.filter(r => !r.endsWith(": 0"));
+  const snapshot = nonzero.join("|");
+  if (snapshot !== prevProbeSnapshot) {
+    prevProbeSnapshot = snapshot;
+    console.log("[CSFD] probe selectors with matches:", nonzero);
+  }
+}
+
 function scan(root: ParentNode = document): void {
   const tiles = outermost([
     ...queryAll(root, SELECTORS.tile),
@@ -75,6 +103,7 @@ function scan(root: ParentNode = document): void {
   const modals = outermost(queryAll(root, SELECTORS.detailModal));
   console.log("[CSFD] scan:", { tiles: tiles.length, bobs: bobs.length, modals: modals.length });
   dumpUiaIfChanged();
+  dumpProbesIfChanged();
   for (const el of tiles) void processTile(el);
   for (const el of bobs) void processBobCard(el);
   for (const el of modals) void processDetailModal(el);
