@@ -1,6 +1,6 @@
 import { Cache } from "./cache";
 import { ThrottleQueue } from "./queue";
-import { realFetch, searchUrl } from "./csfd-fetcher";
+import { realFetch, searchUrl, isAntiBotChallenge } from "./csfd-fetcher";
 import { parseSearchResults, parseDetailPage } from "./csfd-parser";
 import { pickBestMatch } from "./matcher";
 import { normalizeTitle } from "../shared/normalize";
@@ -38,6 +38,10 @@ async function doLookup(req: LookupRequest): Promise<CSFDResult | null> {
   }
   consecutiveRateLimits = 0;
   if (search.status !== 200) throw new Error(`search:${search.status}`);
+  if (isAntiBotChallenge(search.body)) {
+    queue.openCircuit(CIRCUIT_DURATION_MS);
+    throw new Error("anti-bot-challenge");
+  }
 
   const candidates = parseSearchResults(search.body).map(c => ({
     titleNormalized: normalizeTitle(c.title),
