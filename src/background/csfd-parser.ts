@@ -12,25 +12,30 @@ function parseHtml(html: string): NHParseElement {
   return parse(html);
 }
 
+function findYearInAncestors(el: NHParseElement, maxLevels: number = 5): number | null {
+  let cur: NHParseElement | null = el.parentNode as NHParseElement | null;
+  for (let i = 0; i < maxLevels && cur; i++) {
+    const text = cur.textContent ?? "";
+    const m = text.match(/\b(19|20)\d{2}\b/);
+    if (m) return Number(m[0]);
+    cur = cur.parentNode as NHParseElement | null;
+  }
+  return null;
+}
+
 export function parseSearchResults(html: string): SearchCandidate[] {
   const doc = parseHtml(html);
-  const articles = doc.querySelectorAll(
-    "section.main-movies article, section.main-films article"
-  );
+  const links = doc.querySelectorAll("a.film-title-name");
   const results: SearchCandidate[] = [];
-  for (const a of Array.from(articles)) {
-    const link = a.querySelector("a.film-title-name, h3 a");
-    if (!link) continue;
+  const seen = new Set<string>();
+  for (const link of links) {
     const href = link.getAttribute("href") ?? "";
-    const title = link.textContent?.trim() ?? "";
-    if (!title || !href) continue;
-    const yearText =
-      a.querySelector(".film-title-info .info")?.textContent ??
-      a.querySelector(".film-origins-genres span")?.textContent ??
-      "";
-    const yearMatch = yearText.match(/\b(19|20)\d{2}\b/);
-    const year = yearMatch ? Number(yearMatch[0]) : null;
-    const url = href.startsWith("http") ? href : CSFD_BASE + href;
+    if (!href.startsWith("/film/")) continue;
+    const title = (link.textContent ?? "").trim();
+    if (!title || seen.has(href)) continue;
+    seen.add(href);
+    const year = findYearInAncestors(link);
+    const url = CSFD_BASE + href;
     results.push({ title, year, url });
   }
   return results;
