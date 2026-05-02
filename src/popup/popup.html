@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Netflix × ČSFD</title>
+  <style>
+    body { font-family: system-ui, sans-serif; width: 240px; padding: 12px; margin: 0;
+           background: #141414; color: #fff; }
+    h1 { font-size: 14px; margin: 0 0 12px; }
+    button { display: block; width: 100%; margin: 6px 0; padding: 8px; cursor: pointer;
+             background: #ba0305; color: #fff; border: 0; border-radius: 4px; font-size: 13px; }
+    button.ghost { background: transparent; border: 1px solid #444; }
+    .status { font-size: 11px; color: #888; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Netflix × ČSFD</h1>
+  <button id="toggle">Načítám…</button>
+  <button id="clear" class="ghost">Vyčistit cache</button>
+  <div class="status" id="status"></div>
+  <script type="module" src="./popup.ts"></script>
+</body>
+</html>

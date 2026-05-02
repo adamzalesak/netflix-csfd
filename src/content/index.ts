@@ -63,6 +63,14 @@ const observer = new MutationObserver((mutations) => {
     return;
   }
 });
-observer.observe(document.body, { childList: true, subtree: true });
 
-scan();
+async function isEnabled(): Promise<boolean> {
+  const got = await chrome.storage.local.get("settings:enabled");
+  return got["settings:enabled"] !== false;
+}
+
+(async () => {
+  if (!(await isEnabled())) return;
+  observer.observe(document.body, { childList: true, subtree: true });
+  scan();
+})();
