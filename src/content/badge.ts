@@ -21,9 +21,11 @@ const SMALL_STYLES = `
 `;
 
 const LARGE_STYLES = `
-  :host { all: initial; display: block; margin: 8px 0;
+  :host { all: initial; display: block;
+          background: #181818;
+          padding: 14px 56px;
           font-family: system-ui, sans-serif; color: #fff; }
-  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
          font-size: 14px; }
   .pct { background: #ba0305; color: #fff; padding: 4px 10px; border-radius: 4px;
          font-weight: 700; }
@@ -44,17 +46,30 @@ export type LargeBadgeState =
   | { kind: "result"; result: CSFDResult | null };
 
 type Host = { host: HTMLDivElement; root: ShadowRoot };
+type PlacementFn = () => Element | null;
 
-function getOrCreateHost(parent: HTMLElement, value: string): Host {
+function place(host: HTMLDivElement, parent: HTMLElement, after: PlacementFn | undefined): void {
+  const ref = after?.();
+  if (ref?.parentNode && ref.nextSibling !== host) {
+    ref.after(host);
+  } else if (!ref && host.parentNode !== parent) {
+    parent.appendChild(host);
+  }
+}
+
+function getOrCreateHost(parent: HTMLElement, value: string, after?: PlacementFn): Host {
   const existing = parent.querySelectorAll<HTMLDivElement>(`[${BADGE_ATTR}="${value}"]`);
   if (existing.length > 0) {
     for (let i = 1; i < existing.length; i++) existing[i]!.remove();
     const host = existing[0]!;
+    place(host, parent, after);
     return { host, root: host.shadowRoot! };
   }
   const host = document.createElement("div");
   host.setAttribute(BADGE_ATTR, value);
-  parent.appendChild(host);
+  const ref = after?.();
+  if (ref?.parentNode) ref.after(host);
+  else parent.appendChild(host);
   const root = host.attachShadow({ mode: "open" });
   return { host, root };
 }
@@ -74,7 +89,10 @@ export function renderSmallBadge(parent: HTMLElement, state: SmallBadgeState): v
 }
 
 export function renderLargeBadge(parent: HTMLElement, state: LargeBadgeState): void {
-  const { root } = getOrCreateHost(parent, LARGE_VALUE);
+  const after: PlacementFn = () => parent.querySelector(
+    '[data-uia*="player_container"], .previewModal--player_container'
+  );
+  const { root } = getOrCreateHost(parent, LARGE_VALUE, after);
   let body: string;
   if (state.kind === "loading") {
     body = `<div class="row meta"><div class="spinner"></div><span>ČSFD: načítám…</span></div>`;
