@@ -10,14 +10,19 @@ const PROCESSED = new WeakSet<HTMLElement>();
 // použijeme jako fallback v processBobCard / processDetailModal.
 let lastHover: { title: string; year: number | null } | null = null;
 
-document.addEventListener("mouseover", (ev) => {
-  const target = ev.target as HTMLElement | null;
+function trackHover(target: HTMLElement | null): void {
   if (!target?.closest) return;
   const tile = target.closest(SELECTORS.tile) as HTMLElement | null;
   if (!tile) return;
+  // Tile uvnitř bob/detail modalu = doporučení / epizoda — ne to, co user
+  // právě prohlíží na hlavní stránce. Nesmí přepsat lastHover.
+  if (tile.closest(SELECTORS.bobCard) || tile.closest(SELECTORS.detailModal)) return;
   const { title } = extractFromTile(tile);
   if (title) lastHover = { title, year: null };
-}, true);
+}
+
+document.addEventListener("mouseover", (ev) => trackHover(ev.target as HTMLElement), true);
+document.addEventListener("click", (ev) => trackHover(ev.target as HTMLElement), true);
 
 async function processTile(el: HTMLElement): Promise<void> {
   if (PROCESSED.has(el)) return;
