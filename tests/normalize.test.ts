@@ -27,4 +27,10 @@ describe("normalizeTitle", () => {
     expect(normalizeTitle("Sherlock Holmes: A Game of Shadows!"))
       .toBe("sherlock holmes a game of shadows");
   });
+
+  it("strips any parenthetical content (CSFD often tags variants)", () => {
+    expect(normalizeTitle("Papírový dům (Netflix verze)")).toBe("papirovy dum");
+    expect(normalizeTitle("The Office (US)")).toBe("the office");
+    expect(normalizeTitle("Some Show (TV seriál)")).toBe("some show");
+  });
 });
