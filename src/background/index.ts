@@ -93,8 +93,9 @@ async function doLookup(req: LookupRequest): Promise<CSFDResult | null> {
   console.log("[CSFD] detail parsed for", best.payload.title, parsed);
 
   if (parsed && parsed.votes === 0) {
-    const ctx = detail.body.match(/Hodnocení[\s\S]{0,400}/g);
-    console.log("[CSFD] Hodnocení context (first 2):", ctx?.slice(0, 2));
+    const matches = [...detail.body.matchAll(/[\s\S]{300}<strong>(\d{1,7})<\/strong>[\s\S]{100}/g)];
+    console.log("[CSFD] strong-with-number contexts (first 3):",
+      matches.slice(0, 3).map(m => ({ num: m[1], snippet: m[0] })));
   }
 
   return { ...parsed!, csfdUrl: best.payload.url };
