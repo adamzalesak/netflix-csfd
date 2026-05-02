@@ -5,11 +5,11 @@ export const SELECTORS = {
   // grid tile (browse, kategorie, "moje seznam")
   tile: '.title-card-container, [data-uia*="title-card"], .slider-item .title-card',
 
-  // hover preview ("Bob card") — velký panel co vyjede z tile při hover
-  bobCard: '.bob-card, [data-uia="bob-card"]',
+  // hover preview ("mini modal") — velký panel co vyjede z tile při hover
+  bobCard: '[data-uia="modal-motion-container-MINI_MODAL"]',
 
   // detail modal (po kliknutí)
-  detailModal: '.detail-modal, [data-uia="modal"], .previewModal',
+  detailModal: '[data-uia="modal-motion-container-DETAIL_MODAL"]',
 
   // search results
   searchResult: '.search-result-card, [data-uia*="search-result"]',

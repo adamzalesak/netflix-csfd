@@ -5,6 +5,20 @@ import { lookup } from "./lookup-client";
 
 const PROCESSED = new WeakSet<HTMLElement>();
 
+// Modern Netflix hover preview ("MINI_MODAL") nezobrazuje název filmu.
+// Trackujeme poslední tile, na kterém uživatel hoveroval, a jeho title
+// použijeme jako fallback v processBobCard / processDetailModal.
+let lastHover: { title: string; year: number | null } | null = null;
+
+document.addEventListener("mouseover", (ev) => {
+  const target = ev.target as HTMLElement | null;
+  if (!target?.closest) return;
+  const tile = target.closest(SELECTORS.tile) as HTMLElement | null;
+  if (!tile) return;
+  const { title } = extractFromTile(tile);
+  if (title) lastHover = { title, year: null };
+}, true);
+
 async function processTile(el: HTMLElement): Promise<void> {
   if (PROCESSED.has(el)) return;
   const { title } = extractFromTile(el);
@@ -17,7 +31,9 @@ async function processTile(el: HTMLElement): Promise<void> {
 
 async function processBobCard(el: HTMLElement): Promise<void> {
   if (PROCESSED.has(el)) return;
-  const { title, year } = extractFromBobCard(el);
+  const fromModal = extractFromBobCard(el);
+  const title = fromModal.title ?? lastHover?.title ?? null;
+  const year = fromModal.year ?? lastHover?.year ?? null;
   if (!title) return;
   PROCESSED.add(el);
   renderLargeBadge(el, { kind: "loading" });
@@ -27,7 +43,9 @@ async function processBobCard(el: HTMLElement): Promise<void> {
 
 async function processDetailModal(el: HTMLElement): Promise<void> {
   if (PROCESSED.has(el)) return;
-  const { title, year } = extractFromDetailModal(el);
+  const fromModal = extractFromDetailModal(el);
+  const title = fromModal.title ?? lastHover?.title ?? null;
+  const year = fromModal.year ?? lastHover?.year ?? null;
   if (!title) return;
   PROCESSED.add(el);
   renderLargeBadge(el, { kind: "loading" });
@@ -51,48 +69,6 @@ function queryAll(root: ParentNode, selector: string): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(selector));
 }
 
-let prevUiaSnapshot = "";
-function dumpUiaIfChanged(): void {
-  const all = new Set<string>();
-  for (const el of Array.from(document.querySelectorAll("[data-uia]"))) {
-    const v = el.getAttribute("data-uia");
-    if (v) all.add(v);
-  }
-  const sorted = Array.from(all).sort();
-  const snapshot = sorted.join(",");
-  if (snapshot !== prevUiaSnapshot) {
-    prevUiaSnapshot = snapshot;
-    console.log("[CSFD] data-uia values in DOM (" + sorted.length + "):", sorted);
-  }
-}
-
-const PROBE_SELECTORS = [
-  ".previewModal",
-  ".previewModal--container",
-  ".previewModal--detail",
-  ".previewModal--player_container",
-  ".bob-card",
-  ".bobCard",
-  '[data-uia*="modal"]',
-  '[data-uia*="preview"]',
-  '[data-uia*="popup"]',
-  '[data-uia*="bob"]',
-  ".detail-modal",
-  '[role="dialog"]',
-  '[class*="popupCard"]',
-  '[class*="hoverCard"]',
-];
-
-let prevProbeSnapshot = "";
-function dumpProbesIfChanged(): void {
-  const result = PROBE_SELECTORS.map(s => `${s}: ${document.querySelectorAll(s).length}`);
-  const nonzero = result.filter(r => !r.endsWith(": 0"));
-  const snapshot = nonzero.join("|");
-  if (snapshot !== prevProbeSnapshot) {
-    prevProbeSnapshot = snapshot;
-    console.log("[CSFD] probe selectors with matches:", nonzero);
-  }
-}
 
 function scan(root: ParentNode = document): void {
   const tiles = outermost([
@@ -102,17 +78,11 @@ function scan(root: ParentNode = document): void {
   const bobs = outermost(queryAll(root, SELECTORS.bobCard));
   const modals = outermost(queryAll(root, SELECTORS.detailModal));
   console.log("[CSFD] scan:", { tiles: tiles.length, bobs: bobs.length, modals: modals.length });
-  dumpUiaIfChanged();
-  dumpProbesIfChanged();
   for (const el of tiles) void processTile(el);
   for (const el of bobs) void processBobCard(el);
   for (const el of modals) void processDetailModal(el);
 }
 
-window.addEventListener("csfd-dump-uia", () => {
-  prevUiaSnapshot = "";
-  dumpUiaIfChanged();
-});
 
 let pending: number | null = null;
 function scheduleScan(): void {
