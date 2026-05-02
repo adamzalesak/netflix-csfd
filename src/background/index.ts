@@ -92,6 +92,11 @@ async function doLookup(req: LookupRequest): Promise<CSFDResult | null> {
   const parsed = parseDetailPage(detail.body);
   console.log("[CSFD] detail parsed for", best.payload.title, parsed);
 
+  if (parsed && parsed.votes === 0) {
+    const ctx = detail.body.match(/Hodnocení[\s\S]{0,400}/g);
+    console.log("[CSFD] Hodnocení context (first 2):", ctx?.slice(0, 2));
+  }
+
   return { ...parsed!, csfdUrl: best.payload.url };
 }
 
