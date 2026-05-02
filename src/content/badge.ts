@@ -43,22 +43,25 @@ export type LargeBadgeState =
   | { kind: "loading" }
   | { kind: "result"; result: CSFDResult | null };
 
-function removeExisting(parent: HTMLElement, value: string): void {
-  const existing = parent.querySelector(`[${BADGE_ATTR}="${value}"]`);
-  if (existing) existing.remove();
-}
+type Host = { host: HTMLDivElement; root: ShadowRoot };
 
-function makeHost(value: string): HTMLDivElement {
+function getOrCreateHost(parent: HTMLElement, value: string): Host {
+  const existing = parent.querySelectorAll<HTMLDivElement>(`[${BADGE_ATTR}="${value}"]`);
+  if (existing.length > 0) {
+    for (let i = 1; i < existing.length; i++) existing[i]!.remove();
+    const host = existing[0]!;
+    return { host, root: host.shadowRoot! };
+  }
   const host = document.createElement("div");
   host.setAttribute(BADGE_ATTR, value);
-  return host;
+  parent.appendChild(host);
+  const root = host.attachShadow({ mode: "open" });
+  return { host, root };
 }
 
 export function renderSmallBadge(parent: HTMLElement, state: SmallBadgeState): void {
-  removeExisting(parent, SMALL_VALUE);
   if (getComputedStyle(parent).position === "static") parent.style.position = "relative";
-  const host = makeHost(SMALL_VALUE);
-  const root = host.attachShadow({ mode: "open" });
+  const { root } = getOrCreateHost(parent, SMALL_VALUE);
   let body: string;
   if (state.kind === "loading") {
     body = `<div class="badge loading"><div class="spinner"></div></div>`;
@@ -68,13 +71,10 @@ export function renderSmallBadge(parent: HTMLElement, state: SmallBadgeState): v
     body = `<div class="badge unknown">?</div>`;
   }
   root.innerHTML = `<style>${SMALL_STYLES}</style>${body}`;
-  parent.appendChild(host);
 }
 
 export function renderLargeBadge(parent: HTMLElement, state: LargeBadgeState): void {
-  removeExisting(parent, LARGE_VALUE);
-  const host = makeHost(LARGE_VALUE);
-  const root = host.attachShadow({ mode: "open" });
+  const { root } = getOrCreateHost(parent, LARGE_VALUE);
   let body: string;
   if (state.kind === "loading") {
     body = `<div class="row meta"><div class="spinner"></div><span>ČSFD: načítám…</span></div>`;
@@ -94,7 +94,6 @@ export function renderLargeBadge(parent: HTMLElement, state: LargeBadgeState): v
       `</div>`;
   }
   root.innerHTML = `<style>${LARGE_STYLES}</style>${body}`;
-  parent.appendChild(host);
 }
 
 export function hasBadge(el: HTMLElement): boolean {

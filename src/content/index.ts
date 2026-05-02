@@ -35,19 +35,30 @@ async function processDetailModal(el: HTMLElement): Promise<void> {
   renderLargeBadge(el, { kind: "result", result });
 }
 
+function outermost(elements: HTMLElement[]): HTMLElement[] {
+  const set = new Set(elements);
+  return elements.filter(el => {
+    let p = el.parentElement;
+    while (p) {
+      if (set.has(p)) return false;
+      p = p.parentElement;
+    }
+    return true;
+  });
+}
+
+function queryAll(root: ParentNode, selector: string): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(selector));
+}
+
 function scan(root: ParentNode = document): void {
-  for (const el of Array.from(root.querySelectorAll<HTMLElement>(SELECTORS.tile))) {
-    void processTile(el);
-  }
-  for (const el of Array.from(root.querySelectorAll<HTMLElement>(SELECTORS.bobCard))) {
-    void processBobCard(el);
-  }
-  for (const el of Array.from(root.querySelectorAll<HTMLElement>(SELECTORS.detailModal))) {
-    void processDetailModal(el);
-  }
-  for (const el of Array.from(root.querySelectorAll<HTMLElement>(SELECTORS.searchResult))) {
-    void processTile(el);  // search results = same shape as tile
-  }
+  const tiles = outermost([
+    ...queryAll(root, SELECTORS.tile),
+    ...queryAll(root, SELECTORS.searchResult),
+  ]);
+  for (const el of tiles) void processTile(el);
+  for (const el of outermost(queryAll(root, SELECTORS.bobCard))) void processBobCard(el);
+  for (const el of outermost(queryAll(root, SELECTORS.detailModal))) void processDetailModal(el);
 }
 
 let pending: number | null = null;
