@@ -27,17 +27,32 @@ document.addEventListener("click", (ev) => {
   if (!target?.closest) return;
   const tile = target.closest(SELECTORS.tile) as HTMLElement | null;
   if (tile) {
-    // Click na rec uvnitř modalu otevře detail TÉ rec — taky se eviduje.
     const { title } = extractFromTile(tile);
     if (title) lastClick = { title, year: null, at: Date.now() };
     return;
   }
-  // Click NEni na tile — ale je-li uvnitř mini-modalu (např. šipka
-  // "Zobrazit informace"), promotneme aktuální lastHover jako click signal.
+  // Click v billboardu (např. "Další informace") — použij billboard title.
+  const billboard = target.closest(SELECTORS.billboard) as HTMLElement | null;
+  if (billboard) {
+    const { title } = extractFromBillboard(billboard);
+    if (title) lastClick = { title, year: null, at: Date.now() };
+    return;
+  }
+  // Click v mini-modalu mimo tile (šipka "Zobrazit informace") → promote lastHover.
   if (target.closest(SELECTORS.bobCard) && lastHover) {
     lastClick = { ...lastHover, at: Date.now() };
   }
 }, true);
+
+// Fallback pro přímý vstup přes URL (např. /title/<id>) kdy není click/hover —
+// vytáhni název z document.title.
+function titleFromPage(): { title: string; year: number | null } | null {
+  if (!location.pathname.startsWith("/title/")) return null;
+  const t = document.title.trim();
+  if (!t) return null;
+  const cleaned = t.replace(/\s*[|\-–]\s*Netflix.*$/i, "").trim();
+  return cleaned ? { title: cleaned, year: null } : null;
+}
 
 async function processTile(el: HTMLElement): Promise<void> {
   if (PROCESSED.has(el)) return;
@@ -80,7 +95,7 @@ async function processBillboard(el: HTMLElement): Promise<void> {
 
 async function processDetailModal(el: HTMLElement): Promise<void> {
   const click = lastClick && Date.now() - lastClick.at < 10_000 ? lastClick : null;
-  const source = click ?? lastHover;
+  const source = click ?? lastHover ?? titleFromPage();
   if (!source) return;
   const { title, year } = source;
   if (lastTitleByElement.get(el) === title) return;
