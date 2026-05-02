@@ -51,6 +51,21 @@ function queryAll(root: ParentNode, selector: string): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(selector));
 }
 
+let prevUiaSnapshot = "";
+function dumpUiaIfChanged(): void {
+  const all = new Set<string>();
+  for (const el of Array.from(document.querySelectorAll("[data-uia]"))) {
+    const v = el.getAttribute("data-uia");
+    if (v) all.add(v);
+  }
+  const sorted = Array.from(all).sort();
+  const snapshot = sorted.join(",");
+  if (snapshot !== prevUiaSnapshot) {
+    prevUiaSnapshot = snapshot;
+    console.log("[CSFD] data-uia values in DOM (" + sorted.length + "):", sorted);
+  }
+}
+
 function scan(root: ParentNode = document): void {
   const tiles = outermost([
     ...queryAll(root, SELECTORS.tile),
@@ -59,20 +74,16 @@ function scan(root: ParentNode = document): void {
   const bobs = outermost(queryAll(root, SELECTORS.bobCard));
   const modals = outermost(queryAll(root, SELECTORS.detailModal));
   console.log("[CSFD] scan:", { tiles: tiles.length, bobs: bobs.length, modals: modals.length });
+  dumpUiaIfChanged();
   for (const el of tiles) void processTile(el);
   for (const el of bobs) void processBobCard(el);
   for (const el of modals) void processDetailModal(el);
 }
 
-function dumpDataUia(): void {
-  const all = new Set<string>();
-  for (const el of Array.from(document.querySelectorAll("[data-uia]"))) {
-    const v = el.getAttribute("data-uia");
-    if (v) all.add(v);
-  }
-  console.log("[CSFD] data-uia values currently in DOM:", Array.from(all).sort());
-}
-(globalThis as unknown as { __csfdDumpUia: () => void }).__csfdDumpUia = dumpDataUia;
+window.addEventListener("csfd-dump-uia", () => {
+  prevUiaSnapshot = "";
+  dumpUiaIfChanged();
+});
 
 let pending: number | null = null;
 function scheduleScan(): void {
