@@ -26,10 +26,17 @@ document.addEventListener("click", (ev) => {
   const target = ev.target as HTMLElement | null;
   if (!target?.closest) return;
   const tile = target.closest(SELECTORS.tile) as HTMLElement | null;
-  if (!tile) return;
-  // Click na rec uvnitř modalu otevře detail TÉ rec — taky se eviduje.
-  const { title } = extractFromTile(tile);
-  if (title) lastClick = { title, year: null, at: Date.now() };
+  if (tile) {
+    // Click na rec uvnitř modalu otevře detail TÉ rec — taky se eviduje.
+    const { title } = extractFromTile(tile);
+    if (title) lastClick = { title, year: null, at: Date.now() };
+    return;
+  }
+  // Click NEni na tile — ale je-li uvnitř mini-modalu (např. šipka
+  // "Zobrazit informace"), promotneme aktuální lastHover jako click signal.
+  if (target.closest(SELECTORS.bobCard) && lastHover) {
+    lastClick = { ...lastHover, at: Date.now() };
+  }
 }, true);
 
 async function processTile(el: HTMLElement): Promise<void> {
