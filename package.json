@@ -1,0 +1,28 @@
+{
+  "name": "netflix-csfd",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.4.0",
+    "@types/chrome": "^0.1.40",
+    "@vitest/ui": "^3.2.4",
+    "happy-dom": "^20.9.0",
+    "typescript": "^6.0.3",
+    "vite": "^7.3.2",
+    "vitest": "^3.2.4"
+  }
+}
