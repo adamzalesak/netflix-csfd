@@ -1,3 +1,5 @@
+import { parse, type HTMLElement as NHParseElement } from "node-html-parser";
+
 const CSFD_BASE = "https://www.csfd.cz";
 
 export type SearchCandidate = {
@@ -6,8 +8,8 @@ export type SearchCandidate = {
   url: string;
 };
 
-function parseHtml(html: string): Document {
-  return new DOMParser().parseFromString(html, "text/html");
+function parseHtml(html: string): NHParseElement {
+  return parse(html);
 }
 
 export function parseSearchResults(html: string): SearchCandidate[] {

@@ -24,5 +24,8 @@
     "typescript": "^6.0.3",
     "vite": "^7.3.2",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "node-html-parser": "^7.1.0"
   }
 }
