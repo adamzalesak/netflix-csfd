@@ -26,3 +26,24 @@ describe("parseSearchResults", () => {
     expect(parseSearchResults(html)).toEqual([]);
   });
 });
+
+import { parseDetailPage } from "../src/background/csfd-parser";
+
+describe("parseDetailPage", () => {
+  it("extracts rating, votes, origTitle, year, genres", () => {
+    const html = loadFixture("detail-pulp-fiction.html");
+    const detail = parseDetailPage(html);
+    expect(detail).toEqual({
+      rating: 87,
+      votes: 12345,
+      origTitle: "Pulp Fiction",
+      year: 1994,
+      genres: ["Krimi", "Drama"],
+    });
+  });
+
+  it("returns null when rating is missing", () => {
+    const html = "<html><body></body></html>";
+    expect(parseDetailPage(html)).toBeNull();
+  });
+});
